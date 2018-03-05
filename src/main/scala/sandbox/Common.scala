@@ -24,6 +24,7 @@ object Common {
   type Params = Option[Map[String, Seq[String]]]
 
   type Error = String
+
   type Result = String
 
   lazy val serviceA = new ServiceA

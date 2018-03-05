@@ -45,7 +45,7 @@ object UsingEitherT extends App {
 
     def asET[A](f: Future[Option[A]], error: Error) = EitherT.fromOptionF(f, error)
 
-    def asET[A](f: Future[A]) = EitherT.right[A](f)
+    def asET[A](f: Future[A]) = EitherT.right[Error](f)
 
     implicit class ParamHandler(val maybeParams: Params) extends AnyVal {
       def diagnosticGet(key: String): Either[Error, String] = {
