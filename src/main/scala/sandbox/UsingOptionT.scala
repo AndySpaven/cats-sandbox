@@ -38,13 +38,15 @@ object UsingOptionT {
     }
 
     // a helper to make the first two lines nicer
-    def asOptT[A](o: Option[A]) = OptionT.fromOption[Future](o)
+    def asOptT[A](o: Option[A]): OptionT[Future, A] = OptionT.fromOption[Future](o)
+
+    def fAsOptT[A](f: Future[A]): OptionT[Future, A] = OptionT.liftF(f)
 
     (for {
       username      <- asOptT(extractParam(maybeParams, "username"))
       password      <- asOptT(extractParam(maybeParams, "password"))
-      user          <- OptionT.apply(serviceB.callSvc(username, password))
-      session       <- OptionT.liftF(serviceA.callSvc)
+      user          <- OptionT(serviceB.callSvc(username, password))
+      session       <- fAsOptT(serviceA.callSvc)
     } yield session)
       .cata(noSessionResult, s => sessionResult(s))
   }

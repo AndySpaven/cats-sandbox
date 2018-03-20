@@ -9,31 +9,6 @@ import scala.concurrent.Future
 object UsingEitherT extends App {
   import Common._
 
-  def handle(maybeParams: Option[Map[String, Seq[String]]]): Future[Result] = {
-
-    def getParam(params: Map[String, Seq[String]], key: String): Option[String] = {
-      params
-        .getOrElse(key,Seq.empty[String])
-        .headOption
-    }
-
-    def noParams: Result = "No params provided for username or password"
-    def noUsername: Result = "No username"
-    def noPassword: Result = "No password"
-    def noUserFound(username: String): Result = s"No user found for $username"
-
-    def asET[A](o: Option[A], otherwise: Result) = EitherT.fromOption[Future](o, otherwise)
-
-    (for {
-      params        <- asET(maybeParams, noParams)
-      username      <- asET(getParam(params, "username"), noUsername)
-      password      <- asET(getParam(params, "password"), noPassword)
-      user          <- EitherT.fromOptionF(serviceB.callSvc(username, password), noUserFound(username))
-      session       <- EitherT.right[Result](serviceA.callSvc)
-    } yield session)
-    .fold[Result](x => x, s => sessionResult(s))
-  }
-
   /**
     * Reduce load with helper methods and handling Params in common way
    */
@@ -59,7 +34,7 @@ object UsingEitherT extends App {
 
   }
 
-  def handle2(maybeParams: Params): Future[Result] = {
+  def handle(maybeParams: Params): Future[Result] = {
     import Reuseable._
 
      def noUserFound(username: String): Result = s"No user found for $username"
@@ -70,6 +45,6 @@ object UsingEitherT extends App {
       user          <- asET(serviceB.callSvc(username, password), noUserFound(username))
       session       <- asET(serviceA.callSvc)
     } yield session)
-      .fold[Result](x => x, s => sessionResult(s))
+        .fold[Result](error => error, session => sessionResult(session))
   }
 }

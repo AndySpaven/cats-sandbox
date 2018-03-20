@@ -83,11 +83,11 @@ object UsingEitherTApplicativeErrors extends App {
     def asErrorResult(errors: Errors) : Result = errors.map(_.msg).reduceLeft(_ ++ "," ++ _)
 
     (for {
-      paramsWeNeed  <- asET(reduceParams(maybeParams, List("username", "password")))
-      username      <- asET(paramsWeNeed("username"))
-      password      <- asET(paramsWeNeed("password"))
-      user          <- asET(serviceB.callSvc(username, password), one(noUserFound(username)))
-      session       <- asET(serviceA.callSvc)
+      paramsWeNeed  <- asET( reduceParams(maybeParams, List("username", "password")))
+      username      <- asET( paramsWeNeed("username"))
+      password      <- asET( paramsWeNeed("password"))
+      user          <- asET( serviceB.callSvc(username, password), one(noUserFound(username)))
+      session       <- asET( serviceA.callSvc)
     } yield session)
       .fold[Result](asErrorResult, sessionResult)
   }
