@@ -22,6 +22,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 
+/// One pattern seen in the wild is to use ADTs for responses.  Not sure I like this any more - a step too far in many cases
+/// once you're using EitherT and such.
+///
 object DocumentationServiceReplacement2 {
   sealed trait DocumentationServiceResponse
   case class DocumentationFound(apiVersion: ExtendedApiVersion) extends DocumentationServiceResponse
