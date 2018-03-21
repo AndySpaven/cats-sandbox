@@ -1,7 +1,7 @@
 package sandbox
 
 
-import cats.Semigroup
+import cats.Monoid
 import cats.data._
 import cats.implicits._
 
@@ -17,31 +17,29 @@ object UsingEitherTApplicativeErrors extends App {
   object Reuseable {
 
     case class Error(val msg: String) extends AnyVal
-
+    type ErrorOr[A] = Either[Error, A]
+    
     type Errors = NonEmptyList[Error]
     type ErrorsOr[A] = Either[Errors,A]
-    type ErrorsOrT[A] = EitherT[Future, Errors, A]
-
-
-
-    type ErrorsOrParams = ErrorsOr[Map[String,String]]
-
-    def left(l: Errors): ErrorsOrParams = Either.left(l)
-
-    def right(r: Map[String,String]): ErrorsOrParams = Either.right(r)
-
-    implicit val semigroupEither = new Semigroup[ErrorsOrParams] {
-      override def combine(x: ErrorsOrParams, y: ErrorsOrParams): ErrorsOrParams = {
-        (x, y) match {
-          case (Left(er1), Left(er2))     => left(er1 concat er2)
-          case (Left(er1), _)             => left(er1)
-          case (_, Left(er2))             => left(er2)
-          case (Right(r1), Right(r2))     => right(r1 ++ r2)
-        }
-      }
-    }
 
     def one(msg: String): Errors = NonEmptyList.one(Error(msg))
+
+    def left[A](msg: String) : ErrorsOr[A] = Either.left[Errors, A](one(msg))
+
+    implicit def monoidForErrorsOr[B](implicit B: Monoid[B]): Monoid[ErrorsOr[B]] =
+      new Monoid[ErrorsOr[B]] {
+        def empty: ErrorsOr[B] =
+          Right(B.empty)
+        def combine(x: ErrorsOr[B], y: ErrorsOr[B]): ErrorsOr[B] =
+          (x,y) match {
+            case (Right(r1), Right(r2))     => Right(r1.combine(r2))
+            case (Left(l1), Left(l2))     => Left(l1.combine(l2))
+            case (Left(l1), _)             => Left(l1)
+            case (_, Left(l2))             => Left(l2)
+          }
+      }
+
+    type ErrorsOrT[A] = EitherT[Future, Errors, A]
 
     def asEither[A](o: Option[A], orElse: String): ErrorsOr[A] = Either.fromOption(o, one(orElse))
 
@@ -55,6 +53,9 @@ object UsingEitherTApplicativeErrors extends App {
 
     def asET[A](e: Either[Errors, A]): ErrorsOrT[A] = EitherT.fromEither(e)
 
+
+    type ErrorsOrParams = ErrorsOr[Map[String,String]]
+
     implicit class ParamHandler(val params: Map[String,Seq[String]]) extends AnyVal {
       def diagnosticGet(key: String): ErrorsOrParams = {
         for {
@@ -66,11 +67,9 @@ object UsingEitherTApplicativeErrors extends App {
 
     def reduceParams(maybeParams: Params, keys: List[String]): ErrorsOrParams = {
       maybeParams.fold(
-        left(one("No parameters provided"))
+        left[Map[String,String]]("No parameters provided")
       )( params =>
-        keys
-          .map(params.diagnosticGet)
-          .fold(right(Map()))(semigroupEither.combine)
+         Monoid.combineAll(keys.map(params.diagnosticGet))
       )
     }
   }
